@@ -22,7 +22,6 @@ import ch.ethz.ssh2.Session;
  */
 public class Subspace {
 
-	private static final File configFile = new File("conf/subspace.properties");
 	private Properties config = new Properties();
 
 	public void execute() {
@@ -54,7 +53,7 @@ public class Subspace {
 
 			// scp
 			SCPClient scp = connection.createSCPClient();
-			scp.put("testdayo2".getBytes(), "test.txt", "~/" + config.getProperty("current"));
+			scp.put("testdayo2".getBytes(), "test.txt", "~/" + config.getProperty(Constants.KEY_CURRENT));
 
 			//カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
 			session.execCommand("pwd");//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
@@ -138,23 +137,23 @@ public class Subspace {
 //			scp.put("testdayo2".getBytes(), "test.txt", "~/" + config.getProperty("current"));
 			System.out.println("~/" + config.getProperty(Constants.KEY_CURRENT) + path);
 			//カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
-			session.execCommand("cd ~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path);//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
-//			session.execCommand("pwd");//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
+//			session.execCommand("cd ~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path);//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
+////			session.execCommand("pwd");//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
+//
+//			InputStream is = session.getStdout();
+//			int length = 0;
+//			byte[] bytes = new byte[1024 * 4];
+//			while ((length = is.read(bytes)) > 0) {
+//				System.out.print(length + ":" + new String(bytes, 0, length));
+//				System.out.print("end");
+//			}
 
-			InputStream is = session.getStdout();
-			int length = 0;
-			byte[] bytes = new byte[1024 * 4];
-			while ((length = is.read(bytes)) > 0) {
-				System.out.print(length + ":" + new String(bytes, 0, length));
-				System.out.print("end");
-			}
-
-			is.close();
+//			is.close();
 			session.close();
 
 			session = connection.openSession();
 
-			session.execCommand("ls -laA --full-time");
+			session.execCommand("ls -laA --full-time ~/" + config.getProperty(Constants.KEY_CURRENT) + path);
 			BufferedReader br = new BufferedReader(new InputStreamReader(session.getStdout()));
 			String line = null;
 			boolean first = true;
@@ -167,7 +166,7 @@ public class Subspace {
 				recordList.add(record);
 			}
 //			System.out.println(recordList);
-			is.close();
+//			is.close();
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -184,8 +183,8 @@ public class Subspace {
 	}
 
 	private void initProperties() {
-		if (configFile.exists() && configFile.isFile()) {
-			try (FileInputStream fis = new FileInputStream(configFile);) {
+		if (Constants.configFile.exists() && Constants.configFile.isFile()) {
+			try (FileInputStream fis = new FileInputStream(Constants.configFile);) {
 				config.load(fis);
 			} catch (FileNotFoundException e) {
 				// TODO 自動生成された catch ブロック
