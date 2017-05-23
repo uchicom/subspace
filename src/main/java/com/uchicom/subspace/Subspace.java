@@ -8,8 +8,18 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
+import java.nio.file.WatchEvent.Modifier;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import ch.ethz.ssh2.Connection;
@@ -107,6 +117,7 @@ public class Subspace {
 		List<FileRecord> recordList = new ArrayList<>();
 		//これがディレクトリであるかを判定する。
 		initProperties();
+		watch(new File(config.getProperty(Constants.KEY_LOCAL)));
 		Connection connection = null;
 		Session session = null;
 		long start = System.currentTimeMillis();
@@ -218,4 +229,76 @@ public class Subspace {
 //		}
 //	}
 
+	Map<WatchKey, Path> pathMap = new HashMap<>();
+	/**
+	 *
+	 * @param baseFile
+	 */
+	private void watch(File localFile) {
+		Thread thread = new Thread(() -> {
+			WatchKey key = null;
+			try {
+				WatchService service = FileSystems.getDefault().newWatchService();
+				regist(service, localFile);
+				int length = localFile.toPath().toString().length();
+				while ((key = service.take()) != null) {
+
+					// スレッドの割り込み = 終了要求を判定する. 必要なのか不明
+					if (Thread.currentThread().isInterrupted()) {
+						throw new InterruptedException();
+					}
+					if (!key.isValid())
+						continue;
+					for (WatchEvent<?> event : key.pollEvents()) {
+						//eventではファイル名しかとれない
+						Path file = (Path) event.context();
+						//監視対象のフォルダを取得する必要がある
+						Path real = pathMap.get(key).resolve(file);
+
+						if (StandardWatchEventKinds.ENTRY_CREATE.equals(event.kind())) {
+							regist(service, real.toFile());
+							// 追加
+							System.out.println("create:" + real.toString().substring(length));
+						} else if (StandardWatchEventKinds.ENTRY_DELETE.equals(event.kind())) {
+							// 削除
+							System.out.println("delete:" + real.toString().substring(length));
+						} else if (StandardWatchEventKinds.ENTRY_MODIFY.equals(event.kind())) {
+							// 変更
+							System.out.println("modify:" + real.toString().substring(length));
+						}
+					}
+					key.reset();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				key.cancel();
+			}
+		});
+		thread.setDaemon(false); //mainスレッドと運命を共に
+		thread.start();
+	}
+
+	/**
+	 *  監視サービスにフォルダを再起呼び出しして登録する
+	 * @param service
+	 * @param file
+	 * @throws IOException
+	 */
+	public void regist(WatchService service, File file) throws IOException {
+		if (file.isDirectory()) {
+			Path path = file.toPath();
+			System.out.println(path);
+			pathMap.put(
+					path.register(
+							service, new Kind[] { StandardWatchEventKinds.ENTRY_CREATE,
+									StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE },
+							new Modifier[] {}),
+					path);
+			for (File child : file.listFiles()) {
+				regist(service, child);
+			}
+		}
+	}
 }
