@@ -143,9 +143,11 @@ public class Subspace {
 			// コマンド実行
 			session = connection.openSession();
 
-			// scp
-//			SCPClient scp = connection.createSCPClient();
-//			scp.put("testdayo2".getBytes(), "test.txt", "~/" + config.getProperty("current"));
+			// scp (アクション時にこれを実施する
+			SCPClient scp = connection.createSCPClient();
+			scp.put((Long.toHexString(System.currentTimeMillis())).getBytes(),
+					".subspace." + config.getProperty(Constants.KEY_NAME),
+					"~/" + config.getProperty(Constants.KEY_CURRENT) + path);
 			System.out.println("~/" + config.getProperty(Constants.KEY_CURRENT) + path);
 			//カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
 //			session.execCommand("cd ~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path);//詳細表示、隠しファイル表示、.や..非表示 0.5[s]

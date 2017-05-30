@@ -27,4 +27,6 @@ public class Constants {
 	public static final String KEY_CURRENT = "current";
 	/** ローカルマシン上で同期するフォルダパス */
 	public static final String KEY_LOCAL = "local";
+	/** ローカルマシンを識別する名前 */
+	public static final String KEY_NAME = "name";
 }
