@@ -3,6 +3,10 @@ package com.uchicom.subspace;
 
 import java.util.List;
 
+import javax.swing.SwingUtilities;
+
+import com.uchicom.subspace.window.ScopeFrame;
+
 /**
  * @author uchicom: Shigeki Uchiyama
  *
@@ -24,6 +28,11 @@ public class Main {
 				if ("..".equals(record.getName())) continue;
 				System.out.println(record.getName());
 			}
+			SwingUtilities.invokeLater(()-> {
+				ScopeFrame frame = new ScopeFrame("/tmp");
+				frame.setFileRecordList(fileRecordList);
+				frame.setVisible(true);
+			});
 		}
 	}
 

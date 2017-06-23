@@ -2,6 +2,7 @@
 package com.uchicom.subspace;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -112,6 +113,49 @@ public class Subspace {
 		System.out.println(((System.currentTimeMillis() - start) / 1000d) + "[s]");
 	}
 
+	/**
+	 * ファイルをバイトデータで取得する
+	 * @param path
+	 * @return
+	 */
+	public byte[] getBytes(String path) {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+		//これがディレクトリであるかを判定する。
+		initProperties();
+		Connection connection = null;
+		try {
+			// 接続処理
+			connection = new Connection(config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
+			connection.connect();
+
+			// 認証
+			boolean isAuthenticated = false;
+			if (Boolean.valueOf(config.getProperty(Constants.KEY_PUBLIC))) {
+				isAuthenticated = connection.authenticateWithPublicKey(config.getProperty(Constants.KEY_USER),
+					new File(config.getProperty(Constants.KEY_FILE)),
+					config.getProperty(Constants.KEY_PASSWORD));
+			} else {
+				isAuthenticated = connection.authenticateWithPassword(config.getProperty(Constants.KEY_USER),
+					config.getProperty(Constants.KEY_PASSWORD));
+			}
+			if (!isAuthenticated) {
+				return null;//TODO errorをスローする
+			}
+
+			// scp (アクション時にこれを実施する
+			SCPClient scp = connection.createSCPClient();
+			scp.get("~/" + config.getProperty(Constants.KEY_CURRENT) + path, baos);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (connection != null) {
+				connection.close();
+			}
+		}
+		return baos.toByteArray();
+	}
 	public List<FileRecord> listFiles(String path) {
 
 		List<FileRecord> recordList = new ArrayList<>();

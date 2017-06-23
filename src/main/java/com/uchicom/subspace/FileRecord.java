@@ -19,6 +19,17 @@ public class FileRecord {
 	private long size;
 	private Date updated;
 	private String name;
+	public String[] getStrings() {
+		return new String[]{
+				name,
+				group,
+				owner,
+				access,
+				String.valueOf(count),
+				String.valueOf(size),
+				String.valueOf(updated)
+		};
+	}
 
 	public FileRecord(String line) {
 		String[] splits = line.split(" +");
