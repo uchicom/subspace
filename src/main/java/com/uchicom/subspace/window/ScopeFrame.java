@@ -6,6 +6,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,8 +65,7 @@ public class ScopeFrame extends JFrame {
 						String ext = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
 						switch(ext) {
 						case "png":
-							//テキストエディタを開く
-							JOptionPane.showMessageDialog(ScopeFrame.this, "PNGファイル形式");
+							//イメージビューアーを開く
 							try {
 								BufferedImage image = ImageIO.read(new ByteArrayInputStream(subspace.getBytes(path + "/" + name)));
 								ImageFrame frame = new ImageFrame(image);
@@ -77,7 +77,13 @@ public class ScopeFrame extends JFrame {
 							break;
 						case "txt":
 							//テキストエディタを開く
-							JOptionPane.showMessageDialog(ScopeFrame.this, "テキストファイル形式");
+							try {
+								TextFrame frame = new TextFrame(path + "/" + name, new String(subspace.getBytes(path + "/" + name),"utf-8"));
+								frame.setVisible(true);
+							} catch (UnsupportedEncodingException e1) {
+								// TODO 自動生成された catch ブロック
+								e1.printStackTrace();
+							}
 							break;
 						case "pdf":
 							//PDFVを開く
