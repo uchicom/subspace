@@ -145,7 +145,9 @@ public class Subspace {
 
 			// scp (アクション時にこれを実施する
 			SCPClient scp = connection.createSCPClient();
-			scp.get("~/" + config.getProperty(Constants.KEY_CURRENT) + path, baos);
+			String fullPath = "~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path;
+			System.out.println("getBytes:" + fullPath);
+			scp.get(fullPath, baos);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -158,6 +160,7 @@ public class Subspace {
 	}
 	public List<FileRecord> listFiles(String path) {
 
+		String dirPath = "~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path;
 		List<FileRecord> recordList = new ArrayList<>();
 		//これがディレクトリであるかを判定する。
 		initProperties();
@@ -191,8 +194,8 @@ public class Subspace {
 			SCPClient scp = connection.createSCPClient();
 			scp.put((Long.toHexString(System.currentTimeMillis())).getBytes(),
 					".subspace." + config.getProperty(Constants.KEY_NAME),
-					"~/" + config.getProperty(Constants.KEY_CURRENT) + path);
-			System.out.println("~/" + config.getProperty(Constants.KEY_CURRENT) + path);
+					dirPath);
+			System.out.println(dirPath);
 			//カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
 //			session.execCommand("cd ~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path);//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
 ////			session.execCommand("pwd");//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
@@ -210,7 +213,7 @@ public class Subspace {
 
 			session = connection.openSession();
 
-			session.execCommand("ls -laA --full-time ~/" + config.getProperty(Constants.KEY_CURRENT) + path);
+			session.execCommand("ls -laA --full-time " + dirPath);
 			BufferedReader br = new BufferedReader(new InputStreamReader(session.getStdout()));
 			String line = null;
 			boolean first = true;

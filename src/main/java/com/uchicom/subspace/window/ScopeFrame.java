@@ -52,33 +52,43 @@ public class ScopeFrame extends JFrame {
 	 *
 	 */
 	private void initComponents() {
+		//ツリーの表示する？大きくなりすぎる
+		listTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		listTable.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-				//一覧をダブルクリックすると別ウィンドウでメールを表示する。
+				//一覧をダブルクリックすると別ウィンドウでファイルを表示する。
 				if (e.getClickCount() >= 2) {
 					Subspace subspace = new Subspace();
 					listTable.rowAtPoint(e.getPoint());
 					String name = (String)model.getValueAt(listTable.rowAtPoint(e.getPoint()), 0);
 					String access = (String)model.getValueAt(listTable.rowAtPoint(e.getPoint()), 3);
+					System.out.println(path);
+					System.out.println(name);
+					String dirPath = null;
+					//ファイルの一覧を
+					if (path.length() > 0) {
+						dirPath = path + "/" + name;
+					} else {
+						dirPath = name;
+					}
 					if (!access.startsWith("d")) {
 						String ext = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
 						switch(ext) {
 						case "png":
 							//イメージビューアーを開く
 							try {
-								BufferedImage image = ImageIO.read(new ByteArrayInputStream(subspace.getBytes(path + "/" + name)));
-								ImageFrame frame = new ImageFrame(image);
+								BufferedImage image = ImageIO.read(new ByteArrayInputStream(subspace.getBytes(dirPath)));
+								ImageFrame frame = new ImageFrame(dirPath, image);
 								frame.setVisible(true);
 							} catch (IOException e1) {
-								// TODO 自動生成された catch ブロック
 								e1.printStackTrace();
 							}
 							break;
 						case "txt":
 							//テキストエディタを開く
 							try {
-								TextFrame frame = new TextFrame(path + "/" + name, new String(subspace.getBytes(path + "/" + name),"utf-8"));
+								TextFrame frame = new TextFrame(dirPath, new String(subspace.getBytes(dirPath),"utf-8"));
 								frame.setVisible(true);
 							} catch (UnsupportedEncodingException e1) {
 								// TODO 自動生成された catch ブロック
@@ -97,10 +107,11 @@ public class ScopeFrame extends JFrame {
 								JOptionPane.showMessageDialog(ScopeFrame.this, "未対応のファイル形式です");
 						}
 					} else {
-						//ファイルの一覧を
-						List<FileRecord> fileRecordList = subspace.listFiles(path + "/" + name);
+
+						final String finalPath = dirPath;
+						List<FileRecord> fileRecordList = subspace.listFiles(dirPath);
 						SwingUtilities.invokeLater(()-> {
-							ScopeFrame frame = new ScopeFrame("/tmp/" + name);
+							ScopeFrame frame = new ScopeFrame(finalPath);
 							frame.setFileRecordList(fileRecordList);
 							frame.setVisible(true);
 						});

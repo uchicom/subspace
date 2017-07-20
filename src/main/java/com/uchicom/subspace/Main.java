@@ -14,26 +14,25 @@ import com.uchicom.subspace.window.ScopeFrame;
 public class Main {
 
 	/**
+	 * 起動方法をどうする
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		Subspace subspace = new Subspace();
-		List<FileRecord> fileRecordList = subspace.listFiles("/tmp");
-		System.out.println("listFiles /tmp");
-		if (fileRecordList == null) {
-			System.out.println("ディレクトリではありません");
-		} else {
-			for (FileRecord record : fileRecordList) {
-				if (".".equals(record.getName())) continue;
-				if ("..".equals(record.getName())) continue;
-				System.out.println(record.getName());
-			}
-			SwingUtilities.invokeLater(()-> {
-				ScopeFrame frame = new ScopeFrame("/tmp");
-				frame.setFileRecordList(fileRecordList);
-				frame.setVisible(true);
-			});
+		String path = "";
+		List<FileRecord> fileRecordList = subspace.listFiles(path);
+
+		for (FileRecord record : fileRecordList) {
+			if (".".equals(record.getName())) continue;
+			if ("..".equals(record.getName())) continue;
+			System.out.println(record.getName());
 		}
+		SwingUtilities.invokeLater(()-> {
+			ScopeFrame frame = new ScopeFrame(path);
+			frame.setFileRecordList(fileRecordList);
+			frame.setVisible(true);
+		});
+
 	}
 
 }

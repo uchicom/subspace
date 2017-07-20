@@ -13,8 +13,10 @@ import javax.swing.JFrame;
 public class ImageFrame extends JFrame {
 
 	private BufferedImage image;
-	public ImageFrame(BufferedImage image) {
+	public ImageFrame(String title, BufferedImage image) {
+		super(title);
 		this.image = image;
+
 	}
 	@Override
 	public void paint(Graphics g) {
