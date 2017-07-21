@@ -61,7 +61,9 @@ public class ScopeFrame extends JFrame {
 				if (e.getClickCount() >= 2) {
 					Subspace subspace = new Subspace();
 					listTable.rowAtPoint(e.getPoint());
+					//名前
 					String name = (String)model.getValueAt(listTable.rowAtPoint(e.getPoint()), 0);
+					//権限
 					String access = (String)model.getValueAt(listTable.rowAtPoint(e.getPoint()), 3);
 					System.out.println(path);
 					System.out.println(name);
@@ -107,7 +109,7 @@ public class ScopeFrame extends JFrame {
 								JOptionPane.showMessageDialog(ScopeFrame.this, "未対応のファイル形式です");
 						}
 					} else {
-
+						//ディレクトリを開く
 						final String finalPath = dirPath;
 						List<FileRecord> fileRecordList = subspace.listFiles(dirPath);
 						SwingUtilities.invokeLater(()-> {
