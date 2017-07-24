@@ -12,6 +12,7 @@ import java.util.Date;
 public class FileRecord {
 
 	private static final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.S Z");
+	private String parent;
 	private String access;
 	private int count;
 	private String owner;
@@ -31,8 +32,12 @@ public class FileRecord {
 		};
 	}
 
+	public FileRecord(String parent, String line) {
+		this(line);
+		this.parent = parent;
+	}
 	public FileRecord(String line) {
-		String[] splits = line.split(" +");
+		String[] splits = line.split(" +", 9);
 		access = splits[0];
 		count = Integer.parseInt(splits[1]);
 		owner = splits[2];
@@ -162,7 +167,14 @@ public class FileRecord {
 	 */
 	@Override
 	public String toString() {
-		return "FileRecord [access=" + access + ", count=" + count + ", owner=" + owner + ", group=" + group + ", size="
+		return "FileRecord [parent=" + parent + ",access=" + access + ", count=" + count + ", owner=" + owner + ", group=" + group + ", size="
 				+ size + ", updated=" + updated + ", name=" + name + "]";
+	}
+
+	/**
+	 * @return
+	 */
+	public boolean isDirectory() {
+		return access != null && access.startsWith("d");
 	}
 }
