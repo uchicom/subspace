@@ -30,13 +30,16 @@ import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+import com.jcraft.jsch.UserInfo;
 import com.uchicom.subspace.window.ImageFrame;
 import com.uchicom.subspace.window.ScopeFrame;
 import com.uchicom.subspace.window.TextFrame;
-
-import ch.ethz.ssh2.Connection;
-import ch.ethz.ssh2.SCPClient;
-import ch.ethz.ssh2.Session;
 
 /**
  * @author uchicom: Shigeki Uchiyama
@@ -50,55 +53,41 @@ public class Subspace {
 		initProperties();
 	}
 	public void execute() {
-		Connection connection = null;
+		JSch jsch = null;
 		Session session = null;
 		long start = System.currentTimeMillis();
+		ChannelExec channel =  null;
 		try {
 			// 接続処理
-			connection = new Connection(config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
-			connection.connect();
+			jsch = new JSch();
+			session = createSession(jsch);
 
-			// 認証
-			boolean isAuthenticated = false;
-			if (Boolean.valueOf(config.getProperty(Constants.KEY_PUBLIC))) {
-				isAuthenticated = connection.authenticateWithPublicKey(config.getProperty(Constants.KEY_USER),
-					new File(config.getProperty(Constants.KEY_FILE)),
-					config.getProperty(Constants.KEY_PASSWORD));
-			} else {
-				isAuthenticated = connection.authenticateWithPassword(config.getProperty(Constants.KEY_USER),
-						config.getProperty(Constants.KEY_PASSWORD));
-			}
-			if (!isAuthenticated) {
-				return;
-			}
+			//scp
+			ChannelSftp channel2 = (ChannelSftp) session
+	                .openChannel("sftp");
+	        channel2.connect();
+	       // channel2.put("testdayo2", "test.txt", "~/" + config.getProperty(Constants.KEY_CURRENT));
+	        channel2.disconnect();
 
-			// コマンド実行
-			session = connection.openSession();
+			//command
+            channel = (ChannelExec) session.openChannel("exec");
+            channel.setCommand("pwd");
+            channel.connect();
 
-			// scp
-			SCPClient scp = connection.createSCPClient();
-			scp.put("testdayo2".getBytes(), "test.txt", "~/" + config.getProperty(Constants.KEY_CURRENT));
-
-			//カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
-			session.execCommand("pwd");//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
-
-			InputStream is = session.getStdout();
+			InputStream is = channel.getInputStream();
 			int length = 0;
 			byte[] bytes = new byte[1024 * 4];
 			while ((length = is.read(bytes)) > 0) {
 				System.out.print(length + ":" + new String(bytes, 0, length));
 				System.out.print("end");
 			}
-			System.out.println(session.getExitStatus());
 
 			is.close();
-			session.close();
 
 			List<FileRecord> recordList = new ArrayList<>();
-			session = connection.openSession();
 
-			session.execCommand("ls -laA --full-time");
-			BufferedReader br = new BufferedReader(new InputStreamReader(session.getStdout()));
+			channel.setCommand("ls -laA --full-time");
+			BufferedReader br = new BufferedReader(new InputStreamReader(channel.getInputStream()));
 			String line = null;
 			boolean first = true;
 			while ((line = br.readLine()) != null) {
@@ -110,22 +99,89 @@ public class Subspace {
 				recordList.add(record);
 			}
 			System.out.println(recordList);
-			System.out.println(session.getExitStatus());
+			System.out.println(channel.getExitStatus());
 			is.close();
 
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (NumberFormatException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
+		} catch (JSchException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
 		} finally {
 			if (session != null) {
-				session.close();
-			}
-			if (connection != null) {
-				connection.close();
+				session.disconnect();
 			}
 		}
 		System.out.println(((System.currentTimeMillis() - start) / 1000d) + "[s]");
 	}
 
+	/**
+	 * @param jsch
+	 * @throws JSchException
+	 * @throws NumberFormatException
+	 */
+	private Session createSession(JSch jsch) throws NumberFormatException, JSchException {
+		Session session = null;
+		if (Boolean.valueOf(config.getProperty(Constants.KEY_PUBLIC))) {
+			jsch.addIdentity(config.getProperty(Constants.KEY_FILE));
+			jsch.setKnownHosts("~/.ssh/known_hosts");
+			UserInfo userInfo = new UserInfo() {
+
+				@Override
+				public String getPassphrase() {
+					// TODO 自動生成されたメソッド・スタブ
+					return config.getProperty(Constants.KEY_PASSWORD);
+				}
+
+				@Override
+				public String getPassword() {
+					// TODO 自動生成されたメソッド・スタブ
+					return config.getProperty(Constants.KEY_PASSWORD);
+				}
+
+				@Override
+				public boolean promptPassphrase(String arg0) {
+					// TODO 自動生成されたメソッド・スタブ
+					return true;
+				}
+
+				@Override
+				public boolean promptPassword(String arg0) {
+					// TODO 自動生成されたメソッド・スタブ
+					return true;
+				}
+
+				@Override
+				public boolean promptYesNo(String arg0) {
+					// TODO 自動生成されたメソッド・スタブ
+					return true;
+				}
+
+				@Override
+				public void showMessage(String arg0) {
+					// TODO 自動生成されたメソッド・スタブ
+
+				}
+
+			};
+			session = jsch.getSession(config.getProperty(Constants.KEY_USER), config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
+//			session.setConfig("StrictHostKeyChecking", "no");
+
+			session.setUserInfo(userInfo);
+//            session.setPassword(config.getProperty(Constants.KEY_PASSWORD));
+
+		} else {
+			session = jsch.getSession(config.getProperty(Constants.KEY_USER), config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
+			session.setConfig("StrictHostKeyChecking", "no");
+            session.setPassword(config.getProperty(Constants.KEY_PASSWORD));
+		}
+		session.connect();
+
+		return session;
+	}
 	/**
 	 * ファイルをバイトデータで取得する
 	 * @param path
@@ -135,38 +191,29 @@ public class Subspace {
 		path = path.replace("$", "\\$");
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-		//これがディレクトリであるかを判定する。
-		Connection connection = null;
+		JSch jsch = null;
+		Session session = null;
+		ChannelSftp channel = null;
 		try {
 			// 接続処理
-			connection = new Connection(config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
-			connection.connect();
+			jsch = new JSch();
+			session = createSession(jsch);
+			channel = (ChannelSftp)session.openChannel("sftp");
 
-			// 認証
-			boolean isAuthenticated = false;
-			if (Boolean.valueOf(config.getProperty(Constants.KEY_PUBLIC))) {
-				isAuthenticated = connection.authenticateWithPublicKey(config.getProperty(Constants.KEY_USER),
-					new File(config.getProperty(Constants.KEY_FILE)),
-					config.getProperty(Constants.KEY_PASSWORD));
-			} else {
-				isAuthenticated = connection.authenticateWithPassword(config.getProperty(Constants.KEY_USER),
-					config.getProperty(Constants.KEY_PASSWORD));
-			}
-			if (!isAuthenticated) {
-				return null;//TODO errorをスローする
-			}
-
-			// scp (アクション時にこれを実施する
-			SCPClient scp = connection.createSCPClient();
-			String fullPath = "~/\"" + config.getProperty(Constants.KEY_CURRENT) + "/" + path +"\"";
+			String fullPath =  config.getProperty(Constants.KEY_CURRENT) + "/" + path +"";
 			System.out.println("getBytes:" + fullPath);
-			scp.get(fullPath, baos);
+			channel.connect();
+			//channel.setFilenameEncoding("UTF-8");
+			channel.get(fullPath, baos);
 
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			if (connection != null) {
-				connection.close();
+			if (channel != null) {
+				channel.disconnect();
+			}
+			if (session != null) {
+				session.disconnect();
 			}
 		}
 		return baos.toByteArray();
@@ -175,36 +222,19 @@ public class Subspace {
 
 		String dirPath = "~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path;
 		List<FileRecord> recordList = new ArrayList<>();
-		Connection connection = null;
-		Session session = null;
 		long start = System.currentTimeMillis();
+		JSch jsch = null;
+		Session session = null;
+		ChannelSftp channel = null;
+		ChannelExec channel2 = null;
 		try {
 			// 接続処理
-			connection = new Connection(config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
-			connection.connect();
-
-			// 認証
-			boolean isAuthenticated = false;
-			if (Boolean.valueOf(config.getProperty(Constants.KEY_PUBLIC))) {
-				isAuthenticated = connection.authenticateWithPublicKey(config.getProperty(Constants.KEY_USER),
-					new File(config.getProperty(Constants.KEY_FILE)),
-					config.getProperty(Constants.KEY_PASSWORD));
-			} else {
-				isAuthenticated = connection.authenticateWithPassword(config.getProperty(Constants.KEY_USER),
-					config.getProperty(Constants.KEY_PASSWORD));
-			}
-			if (!isAuthenticated) {
-				return null;
-			}
-
-			// コマンド実行
-			session = connection.openSession();
-
-			// scp (アクション時にこれを実施する
-			SCPClient scp = connection.createSCPClient();
-			scp.put((Long.toHexString(System.currentTimeMillis())).getBytes(),
-					".subspace." + config.getProperty(Constants.KEY_NAME),
-					dirPath);
+			jsch = new JSch();
+			session = createSession(jsch);
+			channel = (ChannelSftp)session.openChannel("sftp");
+			channel.connect();
+			channel.put(new ByteArrayInputStream((Long.toHexString(System.currentTimeMillis())).getBytes()),
+					dirPath + ".subspace." + config.getProperty(Constants.KEY_NAME));
 			System.out.println(dirPath);
 			//カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
 //			session.execCommand("cd ~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path);//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
@@ -219,12 +249,12 @@ public class Subspace {
 //			}
 
 //			is.close();
-			session.close();
+			channel.disconnect();
+			channel2 = (ChannelExec)session.openChannel("exec");
 
-			session = connection.openSession();
-
-			session.execCommand("ls -lA --full-time " + dirPath);
-			BufferedReader br = new BufferedReader(new InputStreamReader(session.getStdout()));
+			channel2.setCommand("ls -lA --full-time " + dirPath);
+			channel2.connect();
+			BufferedReader br = new BufferedReader(new InputStreamReader(channel2.getInputStream()));
 			String line = null;
 			boolean first = true;
 			while ((line = br.readLine()) != null) {
@@ -240,12 +270,15 @@ public class Subspace {
 
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (JSchException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
+		} catch (SftpException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
 		} finally {
 			if (session != null) {
-				session.close();
-			}
-			if (connection != null) {
-				connection.close();
+				session.disconnect();
 			}
 		}
 		System.out.println(((System.currentTimeMillis() - start) / 1000d) + "[s]");
@@ -381,34 +414,22 @@ public class Subspace {
 	public List<FileRecord> sync() {
 		String relativePath = config.getProperty(Constants.KEY_CURRENT) + "/";
 
-		Connection connection = null;
-		Session session = null;
 		long start = System.currentTimeMillis();
 		List<FileRecord> recordList = new ArrayList<>();
+		JSch jsch = null;
+		Session session = null;
+		ChannelExec channel = null;
 		try {
 			// 接続処理
-			connection = new Connection(config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
-			connection.connect();
-
-			// 認証
-			boolean isAuthenticated = false;
-			if (Boolean.valueOf(config.getProperty(Constants.KEY_PUBLIC))) {
-				isAuthenticated = connection.authenticateWithPublicKey(config.getProperty(Constants.KEY_USER),
-					new File(config.getProperty(Constants.KEY_FILE)),
-					config.getProperty(Constants.KEY_PASSWORD));
-			} else {
-				isAuthenticated = connection.authenticateWithPassword(config.getProperty(Constants.KEY_USER),
-					config.getProperty(Constants.KEY_PASSWORD));
-			}
-			if (!isAuthenticated) {
-				return null;
-			}
+			jsch = new JSch();
+			session = createSession(jsch);
+			channel = (ChannelExec)session.openChannel("exec");
 
 			// コマンド実行
-			session = connection.openSession();
 
-			session.execCommand("ls -lAR --full-time " + relativePath);
-			BufferedReader br = new BufferedReader(new InputStreamReader(session.getStdout(), config.getProperty("charset")));
+			channel.setCommand("ls -lAR --full-time " + relativePath);
+			channel.connect();
+			BufferedReader br = new BufferedReader(new InputStreamReader(channel.getInputStream(), config.getProperty("charset")));
 			String line = null;
 			boolean dir = false;
 			String parent = null;
@@ -455,12 +476,18 @@ public class Subspace {
 
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (NumberFormatException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
+		} catch (JSchException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
 		} finally {
-			if (session != null) {
-				session.close();
+			if (channel != null) {
+				channel.disconnect();
 			}
-			if (connection != null) {
-				connection.close();
+			if (session != null) {
+				session.disconnect();
 			}
 		}
 		System.out.println(((System.currentTimeMillis() - start) / 1000d) + "[s]");
