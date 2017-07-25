@@ -25,13 +25,14 @@ public class Main {
 			//拡張子によって起動するプログラムを分ける。
 			Subspace subspace = new Subspace();
 			for (String arg : args) {
-				JOptionPane.showMessageDialog(null, "来てますね；" + arg);
 				if (arg.endsWith(".sub")) {
 					//サブスペースの場合は独自のプログラムで表示する
 					String path = arg.substring(0, arg.length() - 4);
 					subspace.start(path, new File(arg).isDirectory());
 					//起動する仕組みは？ファイル→サブスペースを選択するとサブスペースのファイル一覧ダイアログが表示される
 					//ダブルクリックで
+				} else {
+					JOptionPane.showMessageDialog(null, "未対応:" + arg);
 				}
 			}
 			//画面起動（これは別プロジェクトscopeにしようあくまでsubspaceはファイル同期、

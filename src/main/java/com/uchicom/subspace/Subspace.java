@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.FileSystems;
@@ -51,71 +50,6 @@ public class Subspace {
 
 	public Subspace() {
 		initProperties();
-	}
-	public void execute() {
-		JSch jsch = null;
-		Session session = null;
-		long start = System.currentTimeMillis();
-		ChannelExec channel =  null;
-		try {
-			// 接続処理
-			jsch = new JSch();
-			session = createSession(jsch);
-
-			//scp
-			ChannelSftp channel2 = (ChannelSftp) session
-	                .openChannel("sftp");
-	        channel2.connect();
-	       // channel2.put("testdayo2", "test.txt", "~/" + config.getProperty(Constants.KEY_CURRENT));
-	        channel2.disconnect();
-
-			//command
-            channel = (ChannelExec) session.openChannel("exec");
-            channel.setCommand("pwd");
-            channel.connect();
-
-			InputStream is = channel.getInputStream();
-			int length = 0;
-			byte[] bytes = new byte[1024 * 4];
-			while ((length = is.read(bytes)) > 0) {
-				System.out.print(length + ":" + new String(bytes, 0, length));
-				System.out.print("end");
-			}
-
-			is.close();
-
-			List<FileRecord> recordList = new ArrayList<>();
-
-			channel.setCommand("ls -laA --full-time");
-			BufferedReader br = new BufferedReader(new InputStreamReader(channel.getInputStream()));
-			String line = null;
-			boolean first = true;
-			while ((line = br.readLine()) != null) {
-				if (first) {
-					first = false;
-					continue;
-				}
-				FileRecord record = new FileRecord(line);
-				recordList.add(record);
-			}
-			System.out.println(recordList);
-			System.out.println(channel.getExitStatus());
-			is.close();
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (NumberFormatException e) {
-			// TODO 自動生成された catch ブロック
-			e.printStackTrace();
-		} catch (JSchException e) {
-			// TODO 自動生成された catch ブロック
-			e.printStackTrace();
-		} finally {
-			if (session != null) {
-				session.disconnect();
-			}
-		}
-		System.out.println(((System.currentTimeMillis() - start) / 1000d) + "[s]");
 	}
 
 	/**
@@ -188,15 +122,14 @@ public class Subspace {
 	 * @return
 	 */
 	public byte[] getBytes(String path) {
-		path = path.replace("$", "\\$");
+		path = path.replace("$", "\\$");//エスケープ
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-		JSch jsch = null;
+		JSch jsch = new JSch();
 		Session session = null;
 		ChannelSftp channel = null;
 		try {
 			// 接続処理
-			jsch = new JSch();
 			session = createSession(jsch);
 			channel = (ChannelSftp)session.openChannel("sftp");
 
@@ -216,6 +149,7 @@ public class Subspace {
 				session.disconnect();
 			}
 		}
+
 		return baos.toByteArray();
 	}
 	public List<FileRecord> listFiles(String path) {
@@ -223,13 +157,12 @@ public class Subspace {
 		String dirPath = "~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path;
 		List<FileRecord> recordList = new ArrayList<>();
 		long start = System.currentTimeMillis();
-		JSch jsch = null;
+		JSch jsch = new JSch();
 		Session session = null;
 		ChannelSftp channel = null;
 		ChannelExec channel2 = null;
 		try {
 			// 接続処理
-			jsch = new JSch();
 			session = createSession(jsch);
 			channel = (ChannelSftp)session.openChannel("sftp");
 			channel.connect();
@@ -416,12 +349,11 @@ public class Subspace {
 
 		long start = System.currentTimeMillis();
 		List<FileRecord> recordList = new ArrayList<>();
-		JSch jsch = null;
+		JSch jsch = new JSch();
 		Session session = null;
 		ChannelExec channel = null;
 		try {
 			// 接続処理
-			jsch = new JSch();
 			session = createSession(jsch);
 			channel = (ChannelExec)session.openChannel("exec");
 
@@ -551,7 +483,6 @@ public class Subspace {
 				default:
 					JOptionPane.showMessageDialog(null, "未対応のファイル形式です");
 			}
-			JOptionPane.showMessageDialog(null, "ext；" + ext);
 
 		}
 	}
