@@ -12,13 +12,17 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchEvent.Modifier;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -347,64 +351,134 @@ public class Subspace {
 	public List<FileRecord> sync() {
 		String relativePath = config.getProperty(Constants.KEY_CURRENT) + "/";
 
+		File localDir = new File(config.getProperty(Constants.KEY_LOCAL));
 		long start = System.currentTimeMillis();
 		List<FileRecord> recordList = new ArrayList<>();
 		JSch jsch = new JSch();
 		Session session = null;
 		ChannelExec channel = null;
+		ChannelExec porling = null;
 		try {
 			// 接続処理
 			session = createSession(jsch);
-			channel = (ChannelExec)session.openChannel("exec");
 
-			// コマンド実行
+			File subspaceFile = new File(localDir, ".subspace.sub");
+			for (int i = 0; i < 10; i++) {
+				if (subspaceFile.exists()) {
 
-			channel.setCommand("ls -lAR --full-time " + relativePath);
-			channel.connect();
-			BufferedReader br = new BufferedReader(new InputStreamReader(channel.getInputStream(), config.getProperty("charset")));
-			String line = null;
-			boolean dir = false;
-			String parent = null;
-			File parentFile = null;
-			boolean first = false;
-			int parentLength = relativePath.length();
-			File localDir = new File(config.getProperty(Constants.KEY_LOCAL));
-			while ((line = br.readLine()) != null) {
-				System.out.println("line" + line);
-				if (dir) {
-					if (first) {//余計な行を削除
-						first = false;
-						continue;
-					}
-					if ("".equals(line)) {
-						dir = false;
-						continue;
-					}
-					FileRecord record = new FileRecord(parent, line);
-//						file.delete();
-					if (record.isDirectory()) {
-						File file = new File(parentFile, record.getName());
-						if (!file.exists()) {
-							file.mkdir();
+					boolean updated = false;
+					while (!updated) {
+						System.out.println("while:start");
+						try {
+							String line = null;
+							System.out.println("command");
+							if (!session.isConnected()) {
+								session.disconnect();
+								session = createSession(jsch);
+							}
+							porling = (ChannelExec)session.openChannel("exec");
+							porling.setCommand("ls -lAR --full-time " + relativePath + ".subspace");
+
+							System.out.println("connect");
+							porling.connect();
+
+							BufferedReader br = new BufferedReader(new InputStreamReader(porling.getInputStream(), config.getProperty("charset")));
+
+							while ((line = br.readLine()) != null) {
+								System.out.println("line.subspace:" + line);
+								FileRecord record = new FileRecord(line);
+								if (record.getUpdated().getTime() > subspaceFile.lastModified()) {
+									updated = true;
+								}
+							}
+						} catch (Exception e) {
+							e.printStackTrace();
+						} finally {
+							if (porling != null) {
+								System.out.println("disconnect");
+								porling.disconnect();
+							}
 						}
-					} else {
-						File file = new File(parentFile, record.getName() + ".sub");
-						if (!file.exists()) {
-							file.createNewFile();
+						if (updated) {
+							break;
+						} else {
+							//待機
+							try {
+								Thread.sleep(10 * 1000);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
 						}
+						System.out.println("while:end");
 					}
+				}
+				//フォルダ更新
+				channel = (ChannelExec)session.openChannel("exec");
 
-					recordList.add(record);
- 				} else if (line.endsWith(":")) {
- 					dir = true;
- 					first = true;
- 					parent = line.substring(parentLength, line.length() - 1);
- 					//フォルダ構成追加TODO本当は追加と削除が必要フォルダリストを作って、ローカルと比較して追加するか削除するかを同期する必要がある
- 					parentFile = new File(localDir, parent);
- 				}
+				// コマンド実行
+
+				channel.setCommand("ls -lAR --full-time " + relativePath);
+				System.out.println("for start");
+				channel.connect();
+				System.out.println("connect");
+				BufferedReader br = new BufferedReader(new InputStreamReader(channel.getInputStream(), config.getProperty("charset")));
+				String line = null;
+				boolean dir = false;
+				String parent = null;
+				File parentFile = null;
+				boolean first = false;
+				int parentLength = relativePath.length();
+				List<File> fileList = new ArrayList<>();
+				while ((line = br.readLine()) != null) {
+					System.out.println("line" + line);
+					if (dir) {
+						if (first) {//余計な行を削除
+							first = false;
+							continue;
+						}
+						if ("".equals(line)) {
+							dir = false;
+							for (File file : fileList) {
+								remove(file);
+							}
+							fileList.clear();
+							continue;
+						}
+						FileRecord record = new FileRecord(parent, line);
+						File file = null;
+						if (record.isDirectory()) {
+							file = new File(parentFile, record.getName());
+							if (!file.exists()) {
+								file.mkdir();
+							}
+						} else {
+							file = new File(parentFile, record.getName() + ".sub");
+							if (!file.exists()) {
+								file.createNewFile();
+							}
+						}
+						//更新日を同じにする
+						if (file.lastModified() != record.getUpdated().getTime()) {
+							file.setLastModified(record.getUpdated().getTime());
+						}
+						fileList.remove(file);
+
+						recordList.add(record);
+	 				} else if (line.endsWith(":")) {
+	 					dir = true;
+	 					first = true;
+	 					parent = line.substring(parentLength, line.length() - 1);
+	 					//フォルダ構成追加TODO本当は追加と削除が必要フォルダリストを作って、ローカルと比較して追加するか削除するかを同期する必要がある
+	 					parentFile = new File(localDir, parent);
+	 					for (File file : parentFile.listFiles()) {
+	 						fileList.add(file);
+	 					}
+	 				}
+					System.out.println("next");
+				}
+				System.out.println("while end");
+				channel.disconnect();
 			}
-
-
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -484,6 +558,47 @@ public class Subspace {
 					JOptionPane.showMessageDialog(null, "未対応のファイル形式です");
 			}
 
+		}
+	}
+	/**
+	 * 指定のパス以下でかつsubかフォルダの場合
+	 * @param file
+	 */
+	public void remove(File file) {
+		if (file.isDirectory()) {
+			if (file.getPath().startsWith(config.getProperty(Constants.KEY_LOCAL))) {
+				Path start = file.toPath();
+				try {
+					Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
+						@Override
+						public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+							Files.delete(file);
+							return FileVisitResult.CONTINUE;
+						}
+
+						@Override
+						public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException {
+							if (e == null) {
+								Files.delete(dir);
+								return FileVisitResult.CONTINUE;
+							} else {
+								// directory iteration failed
+								throw e;
+							}
+						}
+					});
+				} catch (IOException e) {
+					// TODO 自動生成された catch ブロック
+					e.printStackTrace();
+				}
+
+			} else {
+				System.out.println("失敗");
+			}
+		} else if (file.getName().endsWith(".sub")) {
+			file.delete();
+		} else {
+			System.out.println("ファイル失敗");
 		}
 	}
 }
