@@ -526,6 +526,7 @@ public class Subspace {
 			System.out.println(path + ":" + lastIndex);
 			String ext = path.substring(lastIndex + 1).toLowerCase();
 			switch(ext) {
+			case "jpg":
 			case "png":
 				//イメージビューアーを開く
 				try {
