@@ -25,12 +25,20 @@ public class Main {
 			//拡張子によって起動するプログラムを分ける。
 			Subspace subspace = new Subspace();
 			for (String arg : args) {
-				if (arg.endsWith(".sub")) {
+				if (arg.endsWith(".sub")) { //subspace
 					//サブスペースの場合は独自のプログラムで表示する
 					String path = arg.substring(0, arg.length() - 4);
 					subspace.start(path, new File(arg).isDirectory());
 					//起動する仕組みは？ファイル→サブスペースを選択するとサブスペースのファイル一覧ダイアログが表示される
 					//ダブルクリックで
+				} else if (arg.endsWith("dbx")) { //Dropbox
+					String path = arg.substring(0, arg.length() - 4);
+					subspace.startDropbox(path, new File(arg).isDirectory());
+				} else if (arg.endsWith("gdv")) { //Google Drive
+					String path = arg.substring(0, arg.length() - 4);
+					subspace.startGoogleDrive(path, new File(arg).isDirectory());
+				} else if (arg.endsWith("odv")) { //Microsoft One Drive
+					//One Drive はまだない
 				} else {
 					JOptionPane.showMessageDialog(null, "未対応:" + arg);
 				}

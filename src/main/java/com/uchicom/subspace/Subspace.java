@@ -40,6 +40,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.UserInfo;
+import com.uchicom.subspace.service.DropboxService;
 import com.uchicom.subspace.window.ImageFrame;
 import com.uchicom.subspace.window.ScopeFrame;
 import com.uchicom.subspace.window.TextFrame;
@@ -105,28 +106,32 @@ public class Subspace {
 				}
 
 			};
-			session = jsch.getSession(config.getProperty(Constants.KEY_USER), config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
-//			session.setConfig("StrictHostKeyChecking", "no");
+			session = jsch.getSession(config.getProperty(Constants.KEY_USER), config.getProperty(Constants.KEY_HOST),
+					Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
+			// session.setConfig("StrictHostKeyChecking", "no");
 
 			session.setUserInfo(userInfo);
-//            session.setPassword(config.getProperty(Constants.KEY_PASSWORD));
+			// session.setPassword(config.getProperty(Constants.KEY_PASSWORD));
 
 		} else {
-			session = jsch.getSession(config.getProperty(Constants.KEY_USER), config.getProperty(Constants.KEY_HOST), Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
+			session = jsch.getSession(config.getProperty(Constants.KEY_USER), config.getProperty(Constants.KEY_HOST),
+					Integer.parseInt(config.getProperty(Constants.KEY_PORT)));
 			session.setConfig("StrictHostKeyChecking", "no");
-            session.setPassword(config.getProperty(Constants.KEY_PASSWORD));
+			session.setPassword(config.getProperty(Constants.KEY_PASSWORD));
 		}
 		session.connect();
 
 		return session;
 	}
+
 	/**
 	 * ファイルをバイトデータで取得する
+	 * 
 	 * @param path
 	 * @return
 	 */
 	public byte[] getBytes(String path) {
-		path = path.replace("$", "\\$");//エスケープ
+		path = path.replace("$", "\\$");// エスケープ
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
 		JSch jsch = new JSch();
@@ -135,12 +140,12 @@ public class Subspace {
 		try {
 			// 接続処理
 			session = createSession(jsch);
-			channel = (ChannelSftp)session.openChannel("sftp");
+			channel = (ChannelSftp) session.openChannel("sftp");
 
-			String fullPath =  config.getProperty(Constants.KEY_CURRENT) + "/" + path +"";
+			String fullPath = config.getProperty(Constants.KEY_CURRENT) + "/" + path + "";
 			System.out.println("getBytes:" + fullPath);
 			channel.connect();
-			//channel.setFilenameEncoding("UTF-8");
+			// channel.setFilenameEncoding("UTF-8");
 			channel.get(fullPath, baos);
 
 		} catch (Exception e) {
@@ -156,6 +161,7 @@ public class Subspace {
 
 		return baos.toByteArray();
 	}
+
 	public List<FileRecord> listFiles(String path) {
 
 		String dirPath = "~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path;
@@ -168,26 +174,27 @@ public class Subspace {
 		try {
 			// 接続処理
 			session = createSession(jsch);
-			channel = (ChannelSftp)session.openChannel("sftp");
+			channel = (ChannelSftp) session.openChannel("sftp");
 			channel.connect();
 			channel.put(new ByteArrayInputStream((Long.toHexString(System.currentTimeMillis())).getBytes()),
 					dirPath + ".subspace." + config.getProperty(Constants.KEY_NAME));
 			System.out.println(dirPath);
-			//カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
-//			session.execCommand("cd ~/" + config.getProperty(Constants.KEY_CURRENT) + "/" + path);//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
-////			session.execCommand("pwd");//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
-//
-//			InputStream is = session.getStdout();
-//			int length = 0;
-//			byte[] bytes = new byte[1024 * 4];
-//			while ((length = is.read(bytes)) > 0) {
-//				System.out.print(length + ":" + new String(bytes, 0, length));
-//				System.out.print("end");
-//			}
+			// カレントフォルダを取得し、ファイルやフォルダの一覧を取得する
+			// session.execCommand("cd ~/" + config.getProperty(Constants.KEY_CURRENT) + "/"
+			// + path);//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
+			//// session.execCommand("pwd");//詳細表示、隠しファイル表示、.や..非表示 0.5[s]
+			//
+			// InputStream is = session.getStdout();
+			// int length = 0;
+			// byte[] bytes = new byte[1024 * 4];
+			// while ((length = is.read(bytes)) > 0) {
+			// System.out.print(length + ":" + new String(bytes, 0, length));
+			// System.out.print("end");
+			// }
 
-//			is.close();
+			// is.close();
 			channel.disconnect();
-			channel2 = (ChannelExec)session.openChannel("exec");
+			channel2 = (ChannelExec) session.openChannel("exec");
 
 			channel2.setCommand("ls -lA --full-time " + dirPath);
 			channel2.connect();
@@ -202,8 +209,8 @@ public class Subspace {
 				FileRecord record = new FileRecord(line);
 				recordList.add(record);
 			}
-//			System.out.println(recordList);
-//			is.close();
+			// System.out.println(recordList);
+			// is.close();
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -236,29 +243,29 @@ public class Subspace {
 		}
 	}
 
-
-//	private void storeProperties() {
-//		try {
-//			if (!configFile.exists()) {
-//				configFile.getParentFile().mkdirs();
-//				configFile.createNewFile();
-//			}
-//			try (FileOutputStream fos = new FileOutputStream(configFile);) {
-//				config.store(fos, "Launcher Ver1.0.0");
-//			} catch (FileNotFoundException e) {
-//				// TODO 自動生成された catch ブロック
-//				e.printStackTrace();
-//			} catch (IOException e) {
-//				// TODO 自動生成された catch ブロック
-//				e.printStackTrace();
-//			}
-//		} catch (IOException e) {
-//			// TODO 自動生成された catch ブロック
-//			e.printStackTrace();
-//		}
-//	}
+	// private void storeProperties() {
+	// try {
+	// if (!configFile.exists()) {
+	// configFile.getParentFile().mkdirs();
+	// configFile.createNewFile();
+	// }
+	// try (FileOutputStream fos = new FileOutputStream(configFile);) {
+	// config.store(fos, "Launcher Ver1.0.0");
+	// } catch (FileNotFoundException e) {
+	// // TODO 自動生成された catch ブロック
+	// e.printStackTrace();
+	// } catch (IOException e) {
+	// // TODO 自動生成された catch ブロック
+	// e.printStackTrace();
+	// }
+	// } catch (IOException e) {
+	// // TODO 自動生成された catch ブロック
+	// e.printStackTrace();
+	// }
+	// }
 
 	Map<WatchKey, Path> pathMap = new HashMap<>();
+
 	/**
 	 *
 	 * @param baseFile
@@ -279,9 +286,9 @@ public class Subspace {
 				List<WatchEvent<?>> events = key.pollEvents();
 				System.out.println(events.size());
 				for (WatchEvent<?> event : events) {
-					//eventではファイル名しかとれない
+					// eventではファイル名しかとれない
 					Path file = (Path) event.context();
-					//監視対象のフォルダを取得する必要がある
+					// 監視対象のフォルダを取得する必要がある
 					Path real = pathMap.get(key).resolve(file);
 					System.out.println(event.count());
 					if (StandardWatchEventKinds.ENTRY_CREATE.equals(event.kind())) {
@@ -314,7 +321,8 @@ public class Subspace {
 	}
 
 	/**
-	 *  監視サービスにフォルダを再起呼び出しして登録する
+	 * 監視サービスにフォルダを再起呼び出しして登録する
+	 * 
 	 * @param service
 	 * @param file
 	 * @throws IOException
@@ -335,18 +343,54 @@ public class Subspace {
 		}
 	}
 
+	public void run(Runnable runnable) {
+		Thread thread = new Thread(runnable);
+		thread.setDaemon(true);
+		thread.start();
+	}
+
 	/**
 	 *
 	 */
 	public void start() {
-		//サービス起動
-		//同期
-		sync();
-		//監視
+		// サービス起動
+
+		// ssh同期
+		run(() -> {
+			sync();
+		});
+
+		// Dropbox同期
+		run(() -> {
+			dropboxSync();
+		});
+
+		// GoogleDrive同期
+		run(() -> {
+			googleDriveSync();
+		});
+
+		// 監視
 		watch(new File(config.getProperty(Constants.KEY_LOCAL)));
 	}
+
 	/**
-	 * ls * でファイル階層で一気に取得する、その配下にディレクトリ2つ以上があれば同じように取得する1つの場合はフォルダを限定する/a/ * /b/*のように
+	 * ドロップボックス同期
+	 */
+	public void dropboxSync() {
+		DropboxService service = new DropboxService("MzW_5EucyH8AAAAAAAB2cE7GZ_UP3iOqpZpyuhfUhpgqRwWf_rWkOTMR-Zvx14bR", "subspace", config);
+	}
+
+	/**
+	 * グーグルドライブ同期
+	 */
+	public void googleDriveSync() {
+
+	}
+
+	/**
+	 * ls * でファイル階層で一気に取得する、その配下にディレクトリ2つ以上があれば同じように取得する1つの場合はフォルダを限定する/a/ *
+	 * /b/*のように
 	 */
 	public List<FileRecord> sync() {
 		String relativePath = config.getProperty(Constants.KEY_CURRENT) + "/";
@@ -376,13 +420,14 @@ public class Subspace {
 								session.disconnect();
 								session = createSession(jsch);
 							}
-							porling = (ChannelExec)session.openChannel("exec");
+							porling = (ChannelExec) session.openChannel("exec");
 							porling.setCommand("ls -lAR --full-time " + relativePath + ".subspace");
 
 							System.out.println("connect");
 							porling.connect();
 
-							BufferedReader br = new BufferedReader(new InputStreamReader(porling.getInputStream(), config.getProperty("charset")));
+							BufferedReader br = new BufferedReader(
+									new InputStreamReader(porling.getInputStream(), config.getProperty("charset")));
 
 							while ((line = br.readLine()) != null) {
 								System.out.println("line.subspace:" + line);
@@ -402,7 +447,7 @@ public class Subspace {
 						if (updated) {
 							break;
 						} else {
-							//待機
+							// 待機
 							try {
 								Thread.sleep(10 * 1000);
 							} catch (InterruptedException e) {
@@ -412,8 +457,8 @@ public class Subspace {
 						System.out.println("while:end");
 					}
 				}
-				//フォルダ更新
-				channel = (ChannelExec)session.openChannel("exec");
+				// フォルダ更新
+				channel = (ChannelExec) session.openChannel("exec");
 
 				// コマンド実行
 
@@ -421,7 +466,8 @@ public class Subspace {
 				System.out.println("for start");
 				channel.connect();
 				System.out.println("connect");
-				BufferedReader br = new BufferedReader(new InputStreamReader(channel.getInputStream(), config.getProperty("charset")));
+				BufferedReader br = new BufferedReader(
+						new InputStreamReader(channel.getInputStream(), config.getProperty("charset")));
 				String line = null;
 				boolean dir = false;
 				String parent = null;
@@ -432,7 +478,7 @@ public class Subspace {
 				while ((line = br.readLine()) != null) {
 					System.out.println("line" + line);
 					if (dir) {
-						if (first) {//余計な行を削除
+						if (first) {// 余計な行を削除
 							first = false;
 							continue;
 						}
@@ -457,23 +503,23 @@ public class Subspace {
 								file.createNewFile();
 							}
 						}
-						//更新日を同じにする
+						// 更新日を同じにする
 						if (file.lastModified() != record.getUpdated().getTime()) {
 							file.setLastModified(record.getUpdated().getTime());
 						}
 						fileList.remove(file);
 
 						recordList.add(record);
-	 				} else if (line.endsWith(":")) {
-	 					dir = true;
-	 					first = true;
-	 					parent = line.substring(parentLength, line.length() - 1);
-	 					//フォルダ構成追加TODO本当は追加と削除が必要フォルダリストを作って、ローカルと比較して追加するか削除するかを同期する必要がある
-	 					parentFile = new File(localDir, parent);
-	 					for (File file : parentFile.listFiles()) {
-	 						fileList.add(file);
-	 					}
-	 				}
+					} else if (line.endsWith(":")) {
+						dir = true;
+						first = true;
+						parent = line.substring(parentLength, line.length() - 1);
+						// フォルダ構成追加TODO本当は追加と削除が必要フォルダリストを作って、ローカルと比較して追加するか削除するかを同期する必要がある
+						parentFile = new File(localDir, parent);
+						for (File file : parentFile.listFiles()) {
+							fileList.add(file);
+						}
+					}
 					System.out.println("next");
 				}
 				System.out.println("while end");
@@ -499,8 +545,10 @@ public class Subspace {
 		System.out.println(((System.currentTimeMillis() - start) / 1000d) + "[s]");
 		return recordList;
 	}
+
 	/**
 	 * ファイルをオープンする仕組み
+	 * 
 	 * @param path
 	 * @param dir
 	 */
@@ -509,26 +557,27 @@ public class Subspace {
 		File local = new File(config.getProperty(Constants.KEY_LOCAL));
 		System.out.println(file.toPath().toAbsolutePath());
 		System.out.println(local.toPath().toAbsolutePath());
-		//subspacefile subspace dir .sbf .sbdにする
-		final String dirPath = file.toPath().toAbsolutePath().toString().substring(local.toPath().toAbsolutePath().toString().length() + 1).replace('\\', '/');
+		// subspacefile subspace dir .sbf .sbdにする
+		final String dirPath = file.toPath().toAbsolutePath().toString()
+				.substring(local.toPath().toAbsolutePath().toString().length() + 1).replace('\\', '/');
 
 		if (dir) {
-			//ディレクトリを開く
+			// ディレクトリを開く
 			List<FileRecord> fileRecordList = listFiles(dirPath);
-			SwingUtilities.invokeLater(()-> {
+			SwingUtilities.invokeLater(() -> {
 				ScopeFrame frame = new ScopeFrame(dirPath);
 				frame.setFileRecordList(fileRecordList);
 				frame.setVisible(true);
 			});
 		} else {
-			//検索して
+			// 検索して
 			int lastIndex = path.lastIndexOf('.');
 			System.out.println(path + ":" + lastIndex);
 			String ext = path.substring(lastIndex + 1).toLowerCase();
-			switch(ext) {
+			switch (ext) {
 			case "jpg":
 			case "png":
-				//イメージビューアーを開く
+				// イメージビューアーを開く
 				try {
 					BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBytes(dirPath)));
 					ImageFrame frame = new ImageFrame(dirPath, image);
@@ -538,9 +587,9 @@ public class Subspace {
 				}
 				break;
 			case "txt":
-				//テキストエディタを開く
+				// テキストエディタを開く
 				try {
-					TextFrame frame = new TextFrame(dirPath, new String(getBytes(dirPath),"utf-8"));
+					TextFrame frame = new TextFrame(dirPath, new String(getBytes(dirPath), "utf-8"));
 					frame.setVisible(true);
 				} catch (UnsupportedEncodingException e1) {
 					// TODO 自動生成された catch ブロック
@@ -548,21 +597,153 @@ public class Subspace {
 				}
 				break;
 			case "pdf":
-				//PDFVを開く
+				// PDFVを開く
 				JOptionPane.showMessageDialog(null, "PDFファイル形式");
 				break;
 			case ".zip":
-				//ZIPを開く
+				// ZIPを開く
 				JOptionPane.showMessageDialog(null, "ZIPファイル形式");
 				break;
-				default:
-					JOptionPane.showMessageDialog(null, "未対応のファイル形式です");
+			default:
+				JOptionPane.showMessageDialog(null, "未対応のファイル形式です");
 			}
 
 		}
 	}
+
+	/**
+	 * ファイルをオープンする仕組み
+	 * 
+	 * @param path
+	 * @param dir
+	 */
+	public void startDropbox(String path, boolean dir) {
+		File file = new File(path);
+		File local = new File(config.getProperty(Constants.KEY_LOCAL));
+		System.out.println(file.toPath().toAbsolutePath());
+		System.out.println(local.toPath().toAbsolutePath());
+		// subspacefile subspace dir .sbf .sbdにする
+		final String dirPath = file.toPath().toAbsolutePath().toString()
+				.substring(local.toPath().toAbsolutePath().toString().length() + 1).replace('\\', '/');
+
+		if (dir) {
+			// ディレクトリを開く
+			List<FileRecord> fileRecordList = listFiles(dirPath);
+			SwingUtilities.invokeLater(() -> {
+				ScopeFrame frame = new ScopeFrame(dirPath);
+				frame.setFileRecordList(fileRecordList);
+				frame.setVisible(true);
+			});
+		} else {
+			// 検索して
+			int lastIndex = path.lastIndexOf('.');
+			System.out.println(path + ":" + lastIndex);
+			String ext = path.substring(lastIndex + 1).toLowerCase();
+			switch (ext) {
+			case "jpg":
+			case "png":
+				// イメージビューアーを開く
+				try {
+					BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBytes(dirPath)));
+					ImageFrame frame = new ImageFrame(dirPath, image);
+					frame.setVisible(true);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				break;
+			case "txt":
+				// テキストエディタを開く
+				try {
+					TextFrame frame = new TextFrame(dirPath, new String(getBytes(dirPath), "utf-8"));
+					frame.setVisible(true);
+				} catch (UnsupportedEncodingException e1) {
+					// TODO 自動生成された catch ブロック
+					e1.printStackTrace();
+				}
+				break;
+			case "pdf":
+				// PDFVを開く
+				JOptionPane.showMessageDialog(null, "PDFファイル形式");
+				break;
+			case ".zip":
+				// ZIPを開く
+				JOptionPane.showMessageDialog(null, "ZIPファイル形式");
+				break;
+			default:
+				JOptionPane.showMessageDialog(null, "未対応のファイル形式です");
+			}
+
+		}
+	}
+
+	/**
+	 * ファイルをオープンする仕組み
+	 * 
+	 * @param path
+	 * @param dir
+	 */
+	public void startGoogleDrive(String path, boolean dir) {
+		File file = new File(path);
+		File local = new File(config.getProperty(Constants.KEY_LOCAL));
+		System.out.println(file.toPath().toAbsolutePath());
+		System.out.println(local.toPath().toAbsolutePath());
+		// subspacefile subspace dir .sbf .sbdにする
+		final String dirPath = file.toPath().toAbsolutePath().toString()
+				.substring(local.toPath().toAbsolutePath().toString().length() + 1).replace('\\', '/');
+
+		if (dir) {
+			// ディレクトリを開く
+			List<FileRecord> fileRecordList = listFiles(dirPath);
+			SwingUtilities.invokeLater(() -> {
+				ScopeFrame frame = new ScopeFrame(dirPath);
+				frame.setFileRecordList(fileRecordList);
+				frame.setVisible(true);
+			});
+		} else {
+			// 検索して
+			int lastIndex = path.lastIndexOf('.');
+			System.out.println(path + ":" + lastIndex);
+			String ext = path.substring(lastIndex + 1).toLowerCase();
+			switch (ext) {
+			case "jpg":
+			case "png":
+				// イメージビューアーを開く
+				try {
+					BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBytes(dirPath)));
+					ImageFrame frame = new ImageFrame(dirPath, image);
+					frame.setVisible(true);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				break;
+			case "txt":
+				// テキストエディタを開く
+				try {
+					TextFrame frame = new TextFrame(dirPath, new String(getBytes(dirPath), "utf-8"));
+					frame.setVisible(true);
+				} catch (UnsupportedEncodingException e1) {
+					// TODO 自動生成された catch ブロック
+					e1.printStackTrace();
+				}
+				break;
+			case "pdf":
+				// PDFVを開く
+				JOptionPane.showMessageDialog(null, "PDFファイル形式");
+				break;
+			case ".zip":
+				// ZIPを開く
+				JOptionPane.showMessageDialog(null, "ZIPファイル形式");
+				break;
+			default:
+				JOptionPane.showMessageDialog(null, "未対応のファイル形式です");
+			}
+
+		}
+	}
+
 	/**
 	 * 指定のパス以下でかつsubかフォルダの場合
+	 * 
 	 * @param file
 	 */
 	public void remove(File file) {
