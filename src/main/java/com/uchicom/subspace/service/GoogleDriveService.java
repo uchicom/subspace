@@ -85,9 +85,7 @@ public class GoogleDriveService {
 					System.out.printf("%s (%s)\n", file.getName(), file.getId());
 				}
 			}
-		} catch (
-
-		IOException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

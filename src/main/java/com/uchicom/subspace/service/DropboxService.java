@@ -31,9 +31,8 @@ public class DropboxService {
 	public void list() throws DbxException {
 
 		try {
-			nest(client, "");
+			list(client, "");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -48,7 +47,7 @@ public class DropboxService {
 	 * @throws DbxException
 	 * @throws IOException 
 	 */
-	private void nest(DbxClientV2 client, String path) throws ListFolderErrorException, DbxException, IOException {
+	private void list(DbxClientV2 client, String path) throws ListFolderErrorException, DbxException, IOException {
 		ListFolderResult result = client.files().listFolder(path);
 		File localDir = new File(config.getProperty("dropbox"));
 		while (true) {
@@ -64,7 +63,7 @@ public class DropboxService {
 					if (!file.exists()) {
 						file.mkdir();
 					}
-					nest(client, folderMetadata.getPathLower());
+					list(client, folderMetadata.getPathLower());
 				} else if (metadata instanceof FileMetadata) {
 					FileMetadata fileMetadata = (FileMetadata) metadata;
 					System.out.println("file:" + fileMetadata.getName());
