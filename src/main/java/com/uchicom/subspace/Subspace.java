@@ -378,7 +378,8 @@ public class Subspace {
 	 * ドロップボックス同期
 	 */
 	public void dropboxSync() {
-		DropboxService service = new DropboxService("MzW_5EucyH8AAAAAAAB2cE7GZ_UP3iOqpZpyuhfUhpgqRwWf_rWkOTMR-Zvx14bR", "subspace", config);
+		DropboxService service = new DropboxService(config.getProperty("dbx.key"), config.getProperty("dbx.app"), config);
+		
 	}
 
 	/**
